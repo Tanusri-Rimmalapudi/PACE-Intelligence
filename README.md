@@ -1,5 +1,5 @@
 # PACE Intelligence Platform
-> A modular public-record intelligence platform for analyzing **Property Assessed Clean Energy (PACE)** financing adoption across **Riverside County, California**.
+A modular public-record intelligence platform for analyzing the "Property Assessed Clean Energy (PACE)" financing adoption across Riverside County, California.
 
 PACE Intelligence aggregates and links public-record datasets from county and state agencies to provide a unified view of where PACE assessments are being placed, how adoption changes over time, and which programs and administrators are most active.
 
