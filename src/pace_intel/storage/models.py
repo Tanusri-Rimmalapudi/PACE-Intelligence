@@ -232,3 +232,60 @@ class RecorderDocument(Base):
         Index("ix_recorder_pace_related", "is_pace_related", "recording_date"),
     )
 
+
+# ---------------------------------------------------------------------------
+# Tax Roll records
+
+class TaxRecord(Base):
+    """Annual secured tax roll record for a parcel, including PACE installment line items."""
+
+    __tablename__ = "tax_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    parcel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("parcels.id"), index=True)
+    tax_year: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    total_tax_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
+    ad_valorem_tax: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
+
+    # PACE-specific line items (can be multiple per parcel per year)
+    pace_installment_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
+    pace_program_name: Mapped[Optional[str]] = mapped_column(String(200))
+
+    # Payment status
+    first_installment_paid: Mapped[Optional[bool]] = mapped_column(Boolean)
+    second_installment_paid: Mapped[Optional[bool]] = mapped_column(Boolean)
+    delinquent: Mapped[bool] = mapped_column(Boolean, default=False)
+    delinquent_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
+
+    raw_data: Mapped[Optional[dict]] = mapped_column(JSONB)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    parcel: Mapped["Parcel"] = relationship(back_populates="tax_records")
+
+    __table_args__ = (
+        UniqueConstraint("parcel_id", "tax_year", "pace_program_name", name="uq_tax_parcel_year_program"),
+        Index("ix_tax_year_delinquent", "tax_year", "delinquent"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Ingestion run log
+
+class IngestRun(Base):
+    """Audit log for every ingestion pipeline execution."""
+
+    __tablename__ = "ingest_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    source: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(20), default="running")  # running, success, failed
+    records_fetched: Mapped[int] = mapped_column(Integer, default=0)
+    records_inserted: Mapped[int] = mapped_column(Integer, default=0)
+    records_updated: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+
+    __table_args__ = (Index("ix_ingest_run_source_started", "source", "started_at"),)
